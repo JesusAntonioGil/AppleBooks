@@ -9,8 +9,8 @@ import SwiftUI
 
 
 struct TransparentBlurView: UIViewRepresentable {
-    func makeUIView(context: Context) -> some CustomBlurView {
-        return CustomBlurView(effect: nil)
+    func makeUIView(context: Context) -> CustomBlurView {
+        return CustomBlurView(effect: .init(style: .systemUltraThinMaterial))
     }
     
     func updateUIView(_ uiView: CustomBlurView, context: Context) {
@@ -20,7 +20,7 @@ struct TransparentBlurView: UIViewRepresentable {
 
 
 class CustomBlurView: UIVisualEffectView {
-    override init(effect: UIVisualEffect?) {
+    init(effect: UIBlurEffect) {
         super.init(effect: effect)
         
         setup()

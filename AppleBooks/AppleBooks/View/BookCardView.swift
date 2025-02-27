@@ -10,15 +10,19 @@ import SwiftUI
 
 struct BookCardView: View {
     let book: Book
+    var parentHorizontalPadding: CGFloat = 15
     let size: CGSize
+    var isScrolled: (Bool) -> ()
     // Scroll Animation Properties
     @State private var scrollProperties: ScrollGeometry = .init(contentOffset: .zero, contentSize: .zero, contentInsets: .init(), containerSize: .zero)
     @State private var scrollPosition: ScrollPosition = .init()
+    @State private var isPageScrolled: Bool = false
     
     
-    init(book: Book, size: CGSize) {
+    init(book: Book, size: CGSize, isScrolled: @escaping (Bool) -> ()) {
         self.book = book
         self.size = size
+        self.isScrolled = isScrolled
     }
     
     var body: some View {
@@ -31,10 +35,10 @@ struct BookCardView: View {
                 
                 OtherTextContents()
                     .padding(.horizontal, 15)
-                    .frame(maxWidth: size.width - 30)
+                    .frame(maxWidth: size.width - (parentHorizontalPadding * 2))
                     .padding(.bottom, 50)
             }
-            .padding(.horizontal, -15 * scrollProperties.topInsetProgress)
+            .padding(.horizontal, -parentHorizontalPadding * scrollProperties.topInsetProgress)
         }
         .scrollPosition($scrollPosition)
         .scrollClipDisabled()
@@ -42,15 +46,19 @@ struct BookCardView: View {
             $0
         }, action: { oldValue, newValue in
             scrollProperties = newValue
+            isPageScrolled = newValue.offsetY > 0
         })
         .scrollIndicators(.hidden)
         .scrollTargetBehavior(BookScrollEnd(topInset: scrollProperties.contentInsets.top))
+        .onChange(of: isPageScrolled, { oldValue, newValue in
+            isScrolled(newValue)
+        })
         .background {
             UnevenRoundedRectangle(topLeadingRadius: 15, bottomLeadingRadius: 0, bottomTrailingRadius: 0, topTrailingRadius: 15)
                 .fill(.background)
                 .ignoresSafeArea(.all, edges: .bottom)
                 .offset(y: scrollProperties.offsetY > 0 ? 0 : -scrollProperties.offsetY)
-                .padding(.horizontal, -15 * scrollProperties.topInsetProgress)
+                .padding(.horizontal, -parentHorizontalPadding * scrollProperties.topInsetProgress)
         }
     }
     
@@ -125,7 +133,7 @@ struct BookCardView: View {
         }
         .foregroundStyle(.white)
         .padding(15)
-        .frame(maxWidth: size.width - 30)
+        .frame(maxWidth: size.width - (parentHorizontalPadding * 2))
         .frame(maxWidth: .infinity)
         .background {
             Rectangle()
@@ -202,7 +210,15 @@ struct BookCardView: View {
         .buttonStyle(.plain)
         .font(.title)
         .foregroundStyle(.white, .white.tertiary)
-        .padding(.horizontal, -10 * scrollProperties.topInsetProgress)
+        .background {
+            GeometryReader { geometry in
+                TransparentBlurView()
+                    .frame(height: scrollProperties.contentInsets.top + 50)
+                    .blur(radius: 10, opaque: false)
+                    .frame(height: geometry.size.height, alignment: .bottom)
+            }
+        }
+        .padding(.horizontal, -parentHorizontalPadding * scrollProperties.topInsetProgress)
         .offset(y: scrollProperties.offsetY < 20 ? 0 : scrollProperties.offsetY - 20)
         .zIndex(1000)
     }
@@ -211,8 +227,10 @@ struct BookCardView: View {
 
 #Preview {
     GeometryReader { geometry in
-        BookCardView(book: books[0], size: geometry.size)
-            .padding(.horizontal, 15)
+        BookCardView(book: books[0], size: geometry.size) { _ in
+            
+        }
+        .padding(.horizontal, 15)
     }
     .background(.gray.opacity(0.15))
 }
