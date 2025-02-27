@@ -30,12 +30,27 @@ struct BookCardView: View {
                     }
                 
                 OtherTextContents()
+                    .padding(.horizontal, 15)
+                    .frame(maxWidth: size.width - 30)
+                    .padding(.bottom, 50)
             }
+            .padding(.horizontal, -15 * scrollProperties.topInsetProgress)
         }
+        .scrollPosition($scrollPosition)
+        .scrollClipDisabled()
+        .onScrollGeometryChange(for: ScrollGeometry.self, of: {
+            $0
+        }, action: { oldValue, newValue in
+            scrollProperties = newValue
+        })
+        .scrollIndicators(.hidden)
+        .scrollTargetBehavior(BookScrollEnd(topInset: scrollProperties.contentInsets.top))
         .background {
             UnevenRoundedRectangle(topLeadingRadius: 15, bottomLeadingRadius: 0, bottomTrailingRadius: 0, topTrailingRadius: 15)
                 .fill(.background)
                 .ignoresSafeArea(.all, edges: .bottom)
+                .offset(y: scrollProperties.offsetY > 0 ? 0 : -scrollProperties.offsetY)
+                .padding(.horizontal, -15 * scrollProperties.topInsetProgress)
         }
     }
     
@@ -110,6 +125,7 @@ struct BookCardView: View {
         }
         .foregroundStyle(.white)
         .padding(15)
+        .frame(maxWidth: size.width - 30)
         .frame(maxWidth: .infinity)
         .background {
             Rectangle()
@@ -162,7 +178,9 @@ struct BookCardView: View {
     func FixedHeaderView() -> some View {
         HStack(spacing: 20) {
             Button {
-                
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    scrollPosition.scrollTo(edge: .top)
+                }
             } label: {
                 Image(systemName: "xmark.circle.fill")
             }
@@ -184,6 +202,9 @@ struct BookCardView: View {
         .buttonStyle(.plain)
         .font(.title)
         .foregroundStyle(.white, .white.tertiary)
+        .padding(.horizontal, -10 * scrollProperties.topInsetProgress)
+        .offset(y: scrollProperties.offsetY < 20 ? 0 : scrollProperties.offsetY - 20)
+        .zIndex(1000)
     }
 }
 
@@ -191,12 +212,22 @@ struct BookCardView: View {
 #Preview {
     GeometryReader { geometry in
         BookCardView(book: books[0], size: geometry.size)
+            .padding(.horizontal, 15)
     }
-    .padding(.horizontal, 15)
     .background(.gray.opacity(0.15))
 }
 
 
+
+struct BookScrollEnd: ScrollTargetBehavior {
+    var topInset: CGFloat
+    
+    func updateTarget(_ target: inout ScrollTarget, context: TargetContext) {
+        if target.rect.minY < topInset {
+            target.rect.origin = .zero
+        }
+    }
+}
 
 extension View {
     func serifText(_ font: Font, weight: Font.Weight) -> some View {
@@ -204,5 +235,17 @@ extension View {
             .font(font)
             .fontWeight(weight)
             .fontDesign(.serif)
+    }
+}
+
+
+extension ScrollGeometry {
+    var offsetY: CGFloat {
+        contentOffset.y + contentInsets.top
+    }
+    
+    var topInsetProgress: CGFloat {
+        guard contentInsets.top > 0 else { return 0 }
+        return max(min(offsetY / contentInsets.top, 1), 0)
     }
 }
